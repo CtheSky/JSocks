@@ -7,15 +7,19 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 
-public class Client {
+public class Client extends SocksProxy {
     private static final String host = "localhost";
     private static final int port = 1082;
     private static final int localport = 1081;
     private static final SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
     private static final String username = "cthesky";
-    public static final String password = "cthesky";
+    private static final String password = "cthesky";
+    private static final ExecutorService pool = Executors.newCachedThreadPool();//.newFixedThreadPool(200);
 
     private static void handleAuthentication(DataInputStream in, DataOutputStream out) throws IOException{
         byte version = in.readByte();
@@ -83,7 +87,7 @@ public class Client {
         return proxySocket;
     }
 
-    static SSLSocket establishProxySocket(ArrayList<Byte> connectionRequest) {
+    private static SSLSocket establishProxySocket(ArrayList<Byte> connectionRequest) {
         SSLSocket socket;
         try {
             socket = (SSLSocket) factory.createSocket(host, port);
@@ -176,58 +180,47 @@ public class Client {
         in.readByte();
     }
 
+
+
     public static void main(String[] args) {
         try (ServerSocket server = new ServerSocket(localport)) {
             while (true) {
                 Socket socket = server.accept();
-                DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-                DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-
-                handleAuthentication(in, out);
-                Socket proxySocket = handleConnectionRequest(in, out);
-
-                DataInputStream pin = new DataInputStream(new BufferedInputStream(proxySocket.getInputStream()));
-                DataOutputStream pout = new DataOutputStream(new BufferedOutputStream(proxySocket.getOutputStream()));
-
-                new Thread(() -> {
+                if (pool instanceof ThreadPoolExecutor) {
+                    System.out.println(
+                            "Pool size is now " +
+                                    ((ThreadPoolExecutor) pool).getActiveCount()
+                    );
+                }
+                pool.submit(() -> {
                     try {
-                        while (true) {
-                            byte[] buffer = new byte[1024];
-                            int bytesRead = in.read(buffer);
-                            if (bytesRead == -1) {
-                                proxySocket.shutdownOutput();
-                                break;
-                            } else {
-                                pout.write(buffer, 0, bytesRead);
-                                pout.flush();
-                            }
+                        DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+                        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+
+                        handleAuthentication(in, out);
+                        Socket proxySocket = handleConnectionRequest(in, out);
+
+                        DataInputStream pin = new DataInputStream(new BufferedInputStream(proxySocket.getInputStream()));
+                        DataOutputStream pout = new DataOutputStream(new BufferedOutputStream(proxySocket.getOutputStream()));
+
+                        pool.submit(forwardStream(in, pout, false));
+                        pool.submit(forwardStream(pin, out, true));
+                    } catch (EOFException| IllegalStateException ex) {
+                        ex.printStackTrace();
+                        try {
+                            socket.close();
+                        } catch (IOException e) {
+
                         }
                     } catch (IOException ex) {
-
+                        ex.printStackTrace();
                     }
-                }).start();
-                new Thread(() -> {
-                    try {
-                        while (true) {
-                            byte[] buffer = new byte[1024];
-                            int bytesRead = pin.read(buffer);
-                            if (bytesRead == -1) {
-                                socket.shutdownOutput();
-                                break;
-                            } else {
-                                out.write(buffer, 0, bytesRead);
-                                out.flush();
-                            }
-                        }
-                    } catch (IOException ex) {
-
-                    }
-                }).start();
+                });
             }
         } catch (IOException ex) {
-            System.out.println(ex);
+            ex.printStackTrace();
         } catch (IllegalStateException ex) {
-            System.out.println(ex);
+            ex.printStackTrace();
         }
     }
 }
