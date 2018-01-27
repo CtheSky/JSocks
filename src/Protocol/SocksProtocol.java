@@ -66,21 +66,21 @@ public abstract class SocksProtocol {
     public static String getHostAddressByString(DataInputStream in, byte addressType) throws IOException {
         StringBuilder host = new StringBuilder();
         if (addressType == 1) {
-            int addrLength = 4;
-            for (int i = 0; i < addrLength; ++i) {
+            int addressLength = 4;
+            for (int i = 0; i < addressLength; ++i) {
                 if (i != 0) host.append(".");
-                host.append((char)in.readByte());
+                host.append(String.valueOf(Byte.toUnsignedInt(in.readByte())));
             }
         } else if (addressType == 3) {
-            int addrLength = in.readByte();
-            for (int i = 0; i < addrLength; ++i) {
+            int addressLength = in.readByte();
+            for (int i = 0; i < addressLength; ++i) {
                 host.append((char)in.readByte());
             }
         } else if (addressType == 4) {
-            int addrLength = 16;
-            for (int i = 0; i < addrLength; ++i) {
+            int addressLength = 16;
+            for (int i = 0; i < addressLength; ++i) {
                 if (i != 0 && i % 2 == 0) host.append(":");
-                host.append((char)in.readByte());
+                host.append(String.valueOf(Byte.toUnsignedInt(in.readByte())));
             }
         } else throw new IllegalStateException("Unknown address type code:" + addressType);
 
@@ -108,8 +108,8 @@ public abstract class SocksProtocol {
         return addressBytes;
     }
 
-    public static short getPort(DataInputStream in) throws IOException {
-        short port = in.readShort();
+    public static int getPort(DataInputStream in) throws IOException {
+        int port = Short.toUnsignedInt(in.readShort());
         if (port < 0)
             throw new IllegalStateException("Unknown port number:" + port);
         return port;

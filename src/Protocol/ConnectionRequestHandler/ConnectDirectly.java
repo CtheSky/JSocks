@@ -16,7 +16,7 @@ public class ConnectDirectly implements ConnectionRequestHandler {
         byte reserved = SocksProtocol.checkReserved(in);
         byte addressType = SocksProtocol.checkAddressType(in);
         String host = SocksProtocol.getHostAddressByString(in, addressType);
-        short port = SocksProtocol.getPort(in);
+        int port = SocksProtocol.getPort(in);
 
         Socket proxySocket = establishSocket(host, port);
         out.writeByte(5);
@@ -33,7 +33,7 @@ public class ConnectDirectly implements ConnectionRequestHandler {
         return proxySocket;
     }
 
-    private Socket establishSocket(String host, short port) {
+    private Socket establishSocket(String host, int port) {
         Socket socket;
         try {
             socket = new Socket(host, port);
