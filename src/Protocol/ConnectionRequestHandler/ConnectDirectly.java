@@ -7,12 +7,18 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
-public class ConnectDirectly implements ConnectionRequestHandler {
+public class ConnectDirectly implements ConnectHandler {
 
+    /**
+     * Establish socket to destination ip and port
+     *
+     * @param in DataInputStream of client socket
+     * @param out  DataOutputStream of client socket
+     * @return Socket established to destination server
+     * @throws IOException
+     */
     @Override
-    public Socket handleConnectionRequest(DataInputStream in, DataOutputStream out) throws IOException{
-        byte version = SocksProtocol.checkVersion(in);
-        byte command = SocksProtocol.checkCommand(in);
+    public Socket handle(DataInputStream in, DataOutputStream out) throws IOException{
         byte reserved = SocksProtocol.checkReserved(in);
         byte addressType = SocksProtocol.checkAddressType(in);
         String host = SocksProtocol.getHostAddressByString(in, addressType);

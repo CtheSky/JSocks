@@ -3,6 +3,7 @@ package Server;
 import Protocol.AuthMethod.AuthMethod;
 import Protocol.AuthMethod.NoAuth;
 import Protocol.AuthMethod.UsernamePasswordAuth;
+import Protocol.BindHandler.BindProxy;
 import Protocol.ConnectionRequestHandler.ConnectProxy;
 import Protocol.SocksProtocol;
 
@@ -28,7 +29,8 @@ public class LocalServer extends SocksProtocol{
         byte2localAuth = Stream.of(localSupportedAuthMethods).collect(Collectors.toMap(AuthMethod::bytecode, Function.identity()));
         remoteSupportedAuthMethods = new AuthMethod[] {new UsernamePasswordAuth(username, password)};
         byte2remoteAuth = Stream.of(remoteSupportedAuthMethods).collect(Collectors.toMap(AuthMethod::bytecode, Function.identity()));
-        connectionRequestHandler = new ConnectProxy(remoteHost, remotePort, remoteSupportedAuthMethods, factory);
+        connectHandler = new ConnectProxy(remoteHost, remotePort, remoteSupportedAuthMethods, factory);
+        bindHandler = new BindProxy(remoteHost, remotePort, remoteSupportedAuthMethods, factory);
     }
 
     @Override

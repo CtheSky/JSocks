@@ -1,7 +1,8 @@
 package Protocol;
 
 import Protocol.AuthMethod.AuthMethod;
-import Protocol.ConnectionRequestHandler.ConnectionRequestHandler;
+import Protocol.BindHandler.BindHandler;
+import Protocol.ConnectionRequestHandler.ConnectHandler;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -10,14 +11,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 
 public abstract class SocksProtocol {
     protected AuthMethod[] localSupportedAuthMethods;
     protected Map<Byte, AuthMethod> byte2localAuth;
     protected AuthMethod[] remoteSupportedAuthMethods;
     protected Map<Byte, AuthMethod> byte2remoteAuth;
-    protected ConnectionRequestHandler connectionRequestHandler;
+    protected ConnectHandler connectHandler;
+    protected BindHandler bindHandler;
     protected ExecutorService pool;
 
 
@@ -144,8 +145,20 @@ public abstract class SocksProtocol {
         throw new IllegalStateException("No common supported authentication method between client and server");
     }
 
-    public Socket handleConnectionRequest(DataInputStream in, DataOutputStream out) throws IOException {
-        return connectionRequestHandler.handleConnectionRequest(in, out);
+    public Socket handleRequest(DataInputStream in, DataOutputStream out) throws IOException {
+        byte version = checkVersion(in);
+        byte command = checkCommand(in);
+
+        switch (command) {
+            case 1:
+                return connectHandler.handle(in, out);
+            case 2:
+                return bindHandler.handle(in, out);
+            case 3:
+                return connectHandler.handle(in, out);
+            default:
+                return null;
+        }
     }
 
     public static Runnable forwardStream(DataInputStream from, DataOutputStream to, boolean needClose) {
@@ -191,13 +204,14 @@ public abstract class SocksProtocol {
                         DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
 
                         handleAuthentication(in, out);
-                        Socket proxySocket = handleConnectionRequest(in, out);
+                        Socket proxySocket = handleRequest(in, out);
+                        if (proxySocket != null) {
+                            DataInputStream pin = new DataInputStream(new BufferedInputStream(proxySocket.getInputStream()));
+                            DataOutputStream pout = new DataOutputStream(new BufferedOutputStream(proxySocket.getOutputStream()));
 
-                        DataInputStream pin = new DataInputStream(new BufferedInputStream(proxySocket.getInputStream()));
-                        DataOutputStream pout = new DataOutputStream(new BufferedOutputStream(proxySocket.getOutputStream()));
-
-                        pool.submit(forwardStream(in, pout, false));
-                        pool.submit(forwardStream(pin, out, true));
+                            pool.submit(forwardStream(in, pout, false));
+                            pool.submit(forwardStream(pin, out, true));
+                        }
                     } catch (IllegalStateException | IOException ex) {
                         ex.printStackTrace();
                         try {

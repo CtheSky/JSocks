@@ -2,6 +2,7 @@ package Server;
 
 import Protocol.AuthMethod.AuthMethod;
 import Protocol.AuthMethod.UsernamePasswordAuth;
+import Protocol.BindHandler.BindDirectly;
 import Protocol.ConnectionRequestHandler.ConnectDirectly;
 import Protocol.SocksProtocol;
 
@@ -29,7 +30,8 @@ public class RemoteServer extends SocksProtocol{
         byte2localAuth = Stream.of(localSupportedAuthMethods).collect(Collectors.toMap(AuthMethod::bytecode, Function.identity()));
         remoteSupportedAuthMethods = new AuthMethod[] {};
         byte2remoteAuth = new HashMap<>();
-        connectionRequestHandler = new ConnectDirectly();
+        connectHandler = new ConnectDirectly();
+        bindHandler = new BindDirectly(pool);
     }
 
     @Override
