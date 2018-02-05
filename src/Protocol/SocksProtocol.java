@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public abstract class SocksProtocol {
     protected AuthMethod[] localSupportedAuthMethods;
@@ -20,6 +21,7 @@ public abstract class SocksProtocol {
     protected ConnectHandler connectHandler;
     protected BindHandler bindHandler;
     protected ExecutorService pool;
+    protected ServerSocket server;
 
 
     public static byte checkVersion(DataInputStream in) throws IOException {
@@ -161,16 +163,14 @@ public abstract class SocksProtocol {
         }
     }
 
-    public static Runnable forwardStream(DataInputStream from, DataOutputStream to, boolean needClose) {
+    public static Runnable forwardStream(DataInputStream from, DataOutputStream to) {
         return () -> {
             try {
                 while (true) {
                     byte[] buffer = new byte[2048];
                     int bytesRead = from.read(buffer);
                     if (bytesRead == -1) {
-                        if (needClose)
-                            throw new IOException("Close socket in proxy chain");
-                        break;
+                        throw new IOException("Close socket in proxy chain");
                     }
                     else {
                         to.write(buffer, 0, bytesRead);
@@ -195,8 +195,9 @@ public abstract class SocksProtocol {
     public abstract ServerSocket setupServer() throws IOException;
 
     public void runService() {
-        try (ServerSocket server = setupServer()) {
-            while (true) {
+        try {
+            server = setupServer();
+            while (!Thread.currentThread().isInterrupted()) {
                 Socket socket = server.accept();
                 pool.submit(() -> {
                     try {
@@ -209,8 +210,8 @@ public abstract class SocksProtocol {
                             DataInputStream pin = new DataInputStream(new BufferedInputStream(proxySocket.getInputStream()));
                             DataOutputStream pout = new DataOutputStream(new BufferedOutputStream(proxySocket.getOutputStream()));
 
-                            pool.submit(forwardStream(in, pout, false));
-                            pool.submit(forwardStream(pin, out, true));
+                            pool.submit(forwardStream(in, pout));
+                            pool.submit(forwardStream(pin, out));
                         }
                     } catch (IllegalStateException | IOException ex) {
                         ex.printStackTrace();
@@ -223,7 +224,41 @@ public abstract class SocksProtocol {
                 });
             }
         } catch (IOException ex) {
-            System.err.println("Unable to start server");
+            //ignore
+        } finally {
+            shutdownServer();
+            shutdownExecutor();
         }
+    }
+
+    private void shutdownExecutor() {
+        try {
+            pool.shutdown();
+            pool.awaitTermination(5, TimeUnit.SECONDS);
+        }
+        catch (InterruptedException e) {
+            System.err.println("termination interrupted");
+        }
+        finally {
+            if (!pool.isTerminated()) {
+                System.err.println("killing non-finished tasks");
+            }
+            pool.shutdownNow();
+        }
+    }
+
+    private void shutdownServer() {
+        if (server != null) {
+            try {
+                server.close();
+            } catch (IOException ex) {
+                //ignore
+            }
+        }
+    }
+
+    public void shutdownService() {
+        shutdownServer();
+        shutdownExecutor();
     }
 }

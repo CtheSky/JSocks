@@ -61,7 +61,7 @@ public class BindProxy implements BindHandler {
             SocksProtocol.checkVersion(pin);
             SocksProtocol.checkReply(pin);
             reserved = SocksProtocol.checkReserved(pin);
-            addressType = SocksProtocol.checkReserved(pin);
+            addressType = SocksProtocol.checkAddressType(pin);
             addressBytes = SocksProtocol.getHostAddressBytes(pin, addressType);
             portBytes = SocksProtocol.getPortBytes(pin);
         } catch (IOException | IllegalStateException ex) {
