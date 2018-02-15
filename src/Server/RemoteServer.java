@@ -3,7 +3,7 @@ package Server;
 import Protocol.AuthMethod.AuthMethod;
 import Protocol.AuthMethod.UsernamePasswordAuth;
 import Protocol.BindHandler.BindDirectly;
-import Protocol.ConnectionRequestHandler.ConnectDirectly;
+import Protocol.ConnectHandler.ConnectDirectly;
 import Protocol.SocksProtocol;
 
 import javax.net.ssl.SSLContext;

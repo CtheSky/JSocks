@@ -1,4 +1,4 @@
-package Protocol.ConnectionRequestHandler;
+package Protocol.ConnectHandler;
 
 import Protocol.SocksProtocol;
 

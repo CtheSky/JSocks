@@ -1,4 +1,4 @@
-package Protocol.ConnectionRequestHandler;
+package Protocol.ConnectHandler;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

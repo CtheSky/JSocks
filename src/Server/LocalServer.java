@@ -4,7 +4,7 @@ import Protocol.AuthMethod.AuthMethod;
 import Protocol.AuthMethod.NoAuth;
 import Protocol.AuthMethod.UsernamePasswordAuth;
 import Protocol.BindHandler.BindProxy;
-import Protocol.ConnectionRequestHandler.ConnectProxy;
+import Protocol.ConnectHandler.ConnectProxy;
 import Protocol.SocksProtocol;
 
 import javax.net.ssl.SSLSocketFactory;

@@ -2,7 +2,7 @@ package Protocol;
 
 import Protocol.AuthMethod.AuthMethod;
 import Protocol.BindHandler.BindHandler;
-import Protocol.ConnectionRequestHandler.ConnectHandler;
+import Protocol.ConnectHandler.ConnectHandler;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -43,6 +43,13 @@ public abstract class SocksProtocol {
         if (command != 1 && command != 2 && command != 3)
             throw new IllegalStateException("Unknown command code type");
         return command;
+    }
+
+    public static byte checkFlag(DataInputStream in) throws  IOException {
+        byte flag = in.readByte();
+        if (flag != 0)
+            throw new IllegalStateException("No support for fragmentation");
+        return flag;
     }
 
     public static byte checkReply(DataInputStream in) throws IOException {
